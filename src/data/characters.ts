@@ -1,7 +1,6 @@
 import { CharacterProfile } from '../types/character';
 
-const LUC_VAN_CHI_PORTRAIT_URL =
-  '/assets/aistudio/TA-2026-11-22-12-29-24-LuYunzhipo-4125800978_61bcc975.png';
+const LUC_VAN_CHI_PORTRAIT_URL = `${import.meta.env.BASE_URL}assets/aistudio/TA-2026-11-22-12-29-24-LuYunzhipo-4125800978_61bcc975.png`;
 
 export const CHARACTERS: CharacterProfile[] = [
   {

@@ -12,8 +12,7 @@ interface FiishSectionProps {
 }
 
 const CREATOR_FACEBOOK_URL = 'https://www.facebook.com/share/1A5uTiqgpB/';
-const CREATOR_AVATAR_URL =
-  '/assets/aistudio/Camera_XHS_1795285441236notes_pre_post_1040g3k832692i5e2k40g5p8he7np2lbk5n8ocu8_58c35a21.jpg';
+const CREATOR_AVATAR_URL = `${import.meta.env.BASE_URL}assets/aistudio/Camera_XHS_1795285441236notes_pre_post_1040g3k832692i5e2k40g5p8he7np2lbk5n8ocu8_58c35a21.jpg`;
 
 export function FiishSection({
   characters,
