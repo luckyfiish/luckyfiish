@@ -551,7 +551,7 @@ export function CharacterDetailModal({
                 </form>
 
                 {passwordError && (
-                  <p className="text-xs font-semibold text-[#B91C1C]">
+                  <p className="text-xs font-semibold italic text-[#B91C1C]">
                     {passwordError}
                   </p>
                 )}

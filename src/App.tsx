@@ -241,14 +241,7 @@ export function App() {
     if (!trimmed || trimmed !== target.linkPassword) {
       return {
         ok: false,
-        message: 'Sai mật khẩu! Nhập đúng mật khẩu mới hiện link dẫn nhân vật.',
-      };
-    }
-
-    if (!visitedUnlockLinkIds.includes(id)) {
-      return {
-        ok: false,
-        message: 'Bạn cần bấm vào Lấy Mật khẩu trước rồi mới nhập mật khẩu.',
+        message: 'Sai rồi, hãy nhìn kỹ và dựa vào gợi ý',
       };
     }
 

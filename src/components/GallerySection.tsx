@@ -223,7 +223,7 @@ export function GallerySection({
                       </button>
                     </form>
                     {passwordErrors[char.id] && (
-                      <p className="text-[10px] sm:text-[11px] font-semibold text-[#B91C1C]">
+                      <p className="text-[10px] sm:text-[11px] font-semibold italic text-[#B91C1C]">
                         {passwordErrors[char.id]}
                       </p>
                     )}
