@@ -34,11 +34,12 @@ export interface CharacterComment {
 
 export interface SpinWheelResult {
   segmentLabel: string;
-  rewardKind: 'character-pack' | 'image-pack' | 'rare-character-pack' | 'clover';
+  rewardKind: 'character-pack' | 'image-pack' | 'rare-character-pack' | 'clover' | 'multi';
   cloverGain?: number;
   items: Array<{
     id: string;
-    character: CharacterProfile;
+    character?: CharacterProfile;
+    cloverGain?: number;
     isRare: boolean;
     label: string;
   }>;

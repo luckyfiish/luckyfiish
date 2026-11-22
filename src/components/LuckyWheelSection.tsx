@@ -15,7 +15,7 @@ interface LuckyWheelSectionProps {
   rareCharacters: CharacterProfile[];
   unlockedIds: string[];
   clovers: number;
-  onExecuteSpin: (segmentType: WheelSegmentType) => SpinWheelResult | null;
+  onExecuteSpin: (segmentTypes: WheelSegmentType[]) => SpinWheelResult | null;
   onUnlockRare: (id: string) => void;
   onSelectCharacter: (character: CharacterProfile) => void;
 }
@@ -142,9 +142,15 @@ export function LuckyWheelSection({
   const handleSpin = () => {
     if (isSpinning || clovers < 5) return;
 
-    const chosenType = rollSecretWheelOutcome();
+    const rolls: WheelSegmentType[] = [
+      rollSecretWheelOutcome(),
+      rollSecretWheelOutcome(),
+      rollSecretWheelOutcome(),
+    ];
+
+    const primaryType = rolls[0];
     const matchingIndices = WHEEL_SEGMENTS.map((seg, i) =>
-      seg.type === chosenType ? i : -1
+      seg.type === primaryType ? i : -1
     ).filter((i) => i !== -1);
 
     const chosenIndex =
@@ -152,7 +158,7 @@ export function LuckyWheelSection({
         ? matchingIndices[Math.floor(Math.random() * matchingIndices.length)]
         : 0;
 
-    const result = onExecuteSpin(chosenType);
+    const result = onExecuteSpin(rolls);
     if (!result) return;
 
     const extraTurns = 5 * 360;
@@ -182,11 +188,12 @@ export function LuckyWheelSection({
             Vòng Quay Chủ Đề: Đại Dương
           </h1>
           <p className="text-sm sm:text-base text-[#285270] mt-3 leading-relaxed">
-            Dùng <strong className="text-[#0A2A43]">5 🍀</strong> để quay 1 lượt và nhận
-            ngẫu nhiên <strong className="text-[#0A2A43]">Gói Nhân Vật</strong>,{' '}
-            <strong className="text-[#0A2A43]">Gói Ảnh</strong>,{' '}
-            <strong className="text-[#0A2A43]">Gói Nhân Vật Hiếm</strong> hoặc thêm{' '}
-            <strong className="text-[#0A2A43]">+1 / +2 / +5 🍀</strong>.
+            <strong className="text-[#0A2A43]">5 🍀</strong> nhận được{' '}
+            <span className="relative inline-flex items-center gap-1 px-2.5 py-0.5 mx-0.5 rounded-full bg-gradient-to-r from-[#FEF08A] via-[#A7F3D0] to-[#BAE6FD] border border-white font-display text-base sm:text-lg font-extrabold text-[#0A2A43] animate-lucky-three align-middle">
+              <Sparkles className="w-3.5 h-3.5 text-[#D97706]" />
+              <span>3</span>
+            </span>{' '}
+            vật phẩm ngẫu nhiên
           </p>
         </div>
 
@@ -283,69 +290,77 @@ export function LuckyWheelSection({
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm font-bold text-[#0A2A43]">
                   <Sparkles className="w-4 h-4 text-[#D97706]" />
-                  <span>Kết quả: {lastResult.segmentLabel}</span>
+                  <span>{lastResult.segmentLabel}</span>
                 </div>
 
-                {lastResult.rewardKind === 'clover' ? (
-                  <div className="rounded-3xl p-7 bg-[#FEF9C3]/75 border border-[#FDE047] text-center space-y-2">
-                    <div className="font-display text-4xl font-bold text-[#0A2A43]">
-                      +{lastResult.cloverGain} 🍀
-                    </div>
-                    <p className="text-sm font-semibold text-[#285270]">
-                      Cỏ 4 lá may mắn đã được cộng thẳng vào túi của bạn!
-                    </p>
-                  </div>
-                ) : lastResult.items.length === 0 ? (
-                  <div className="rounded-3xl p-7 bg-white/80 border border-white text-center space-y-2">
-                    <div className="font-display text-2xl font-bold text-[#0A2A43]">
-                      {lastResult.segmentLabel}
-                    </div>
-                    <p className="text-sm font-semibold text-[#285270]">
-                      {lastResult.rewardKind === 'rare-character-pack'
-                        ? 'Hiện chưa có nhân vật hiếm nào được cập nhật.'
-                        : 'Hiện chưa có nhân vật nào trong hệ thống để mở khóa.'}
-                    </p>
-                  </div>
-                ) : (
-                  lastResult.items.map((item) => (
+                {lastResult.items.map((item) => {
+                  if (item.character) {
+                    const char = item.character;
+                    return (
+                      <div
+                        key={item.id}
+                        className={`rounded-2xl p-4 flex items-center gap-4 border backdrop-blur-md ${
+                          item.isRare
+                            ? 'bg-[#FEF9C3]/80 border-[#FDE047]'
+                            : 'bg-white/80 border-white'
+                        }`}
+                      >
+                        <div className="w-14 h-[74px] rounded-xl overflow-hidden bg-[#D6F1FE] border border-white shrink-0">
+                          <PortraitImage
+                            src={char.portraitUrl}
+                            alt={char.name}
+                            name={char.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-[#0284C7]">
+                            {item.label}
+                          </div>
+                          <h3 className="font-display text-xl font-bold text-[#0A2A43] truncate">
+                            {char.name}
+                          </h3>
+                          <p className="text-xs text-[#285270]">
+                            {char.code} · {char.age} tuổi
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onSelectCharacter(char)}
+                          className="glass-btn inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                        >
+                          <span>Xem</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
                     <div
                       key={item.id}
-                      className={`rounded-2xl p-4 flex items-center gap-4 border backdrop-blur-md ${
+                      className={`rounded-2xl p-4 flex items-center justify-between gap-4 border backdrop-blur-md ${
                         item.isRare
                           ? 'bg-[#FEF9C3]/80 border-[#FDE047]'
-                          : 'bg-white/80 border-white'
+                          : 'bg-[#E0F2FE]/80 border-white'
                       }`}
                     >
-                      <div className="w-14 h-[74px] rounded-xl overflow-hidden bg-[#D6F1FE] border border-white shrink-0">
-                        <PortraitImage
-                          src={item.character.portraitUrl}
-                          alt={item.character.name}
-                          name={item.character.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-bold text-[#0284C7]">
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-bold text-[#15803D]">
                           {item.label}
                         </div>
-                        <h3 className="font-display text-xl font-bold text-[#0A2A43] truncate">
-                          {item.character.name}
-                        </h3>
-                        <p className="text-xs text-[#285270]">
-                          {item.character.code} · {item.character.age} tuổi
-                        </p>
+                        <div className="font-display text-xl font-bold text-[#0A2A43]">
+                          {item.cloverGain
+                            ? `+${item.cloverGain} 🍀 may mắn`
+                            : 'Chưa có nhân vật phù hợp'}
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => onSelectCharacter(item.character)}
-                        className="glass-btn inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
-                      >
-                        <span>Xem</span>
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                      </button>
+                      <span className="text-xl" aria-hidden="true">
+                        🍀
+                      </span>
                     </div>
-                  ))
-                )}
+                  );
+                })}
               </div>
             ) : (
               <div className="rounded-3xl p-7 bg-white/70 border border-white space-y-3">
@@ -363,7 +378,7 @@ export function LuckyWheelSection({
                   </li>
                   <li>
                     • <strong className="text-[#0A2A43]">Gói Nhân Vật Hiếm</strong>:
-                    Cơ hội nhận ngay nhân vật hiếm đặc biệt (không xuất hiện tại Thư Viện).
+                    Cơ hội nhận ngay nhân vật hiếm đặc biệt
                   </li>
                   <li>
                     • <strong className="text-[#0A2A43]">+1 🍀 / +2 🍀 / +5 🍀</strong>:
@@ -376,7 +391,7 @@ export function LuckyWheelSection({
         </div>
       </div>
 
-      {/* Rare Characters Section (mở khóa bằng 25 🍀 hoặc nhận tại Vòng Quay Đại Dương) */}
+      {/* Rare Characters Section */}
       {rareCharacters.length > 0 && (
         <div className="glass-panel rounded-3xl p-6 sm:p-8 space-y-5">
           <div>
@@ -384,8 +399,8 @@ export function LuckyWheelSection({
               Nhân Vật Hiếm ({rareCharacters.length})
             </h2>
             <p className="text-xs text-[#285270] mt-1">
-              Các nhân vật hiếm không xuất hiện tại Thư Viện — có thể mở khóa trực tiếp
-              bằng <strong>25 🍀</strong> hoặc nhận qua <strong>Vòng Quay Đại Dương</strong>.
+              Có thể mở khóa trực tiếp bằng <strong>25 🍀</strong> hoặc nhận qua{' '}
+              <strong>Vòng Quay Đại Dương</strong>.
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

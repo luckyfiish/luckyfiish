@@ -15,7 +15,10 @@ import { GallerySection } from './components/GallerySection';
 import { FiishSection } from './components/FiishSection';
 import { OceanLuckyAtmosphere } from './components/OceanLuckyAtmosphere';
 import { MusicPlayerWidget } from './components/MusicPlayerWidget';
+import { NoticeGateModal } from './components/NoticeGateModal';
+import { NameSetupModal } from './components/NameSetupModal';
 
+const USER_NAME_STORAGE_KEY = 'luckyfiish_user_name_v1';
 const LIKES_STORAGE_KEY = 'luckyfiish_likes_v2';
 const COMMENTS_STORAGE_KEY = 'luckyfiish_comments_v2';
 const CLOVER_STORAGE_KEY = 'luckyfiish_clovers_v2';
@@ -50,6 +53,11 @@ function loadJson<T>(key: string, fallback: T): T {
 }
 
 export function App() {
+  const [hasAcceptedNotice, setHasAcceptedNotice] = useState(false);
+  const [userName, setUserName] = useState<string>(() =>
+    loadJson<string>(USER_NAME_STORAGE_KEY, '')
+  );
+  const [isEditingName, setIsEditingName] = useState(false);
   const [activeTab, setActiveTab] = useState<MainTab>('nhan-vat');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,6 +98,7 @@ export function App() {
 
   useEffect(() => {
     try {
+      window.localStorage.setItem(USER_NAME_STORAGE_KEY, JSON.stringify(userName));
       window.localStorage.setItem(CLOVER_STORAGE_KEY, JSON.stringify(clovers));
       window.localStorage.setItem(
         CHECKIN_TS_STORAGE_KEY,
@@ -111,6 +120,7 @@ export function App() {
       // Ignore storage quota errors
     }
   }, [
+    userName,
     clovers,
     lastCheckInAt,
     unlockedIds,
@@ -255,127 +265,110 @@ export function App() {
   };
 
   const handleExecuteSpin = (
-    segmentType: WheelSegmentType
+    segmentTypes: WheelSegmentType[]
   ): SpinWheelResult | null => {
     if (clovers < 5) return null;
 
     const pickRandomChar = (pool: CharacterProfile[]): CharacterProfile | null =>
       pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null;
 
-    if (segmentType === 'rare-character-pack') {
-      const unownedRares = RARE_CHARACTERS.filter((r) => !unlockedIds.includes(r.id));
-      const rareChar = pickRandomChar(
-        unownedRares.length > 0 ? unownedRares : RARE_CHARACTERS
-      );
+    let netCloverDelta = -5;
+    const unlockedBatch: string[] = [];
+    const imageBatch: string[] = [];
+    const resultItems: SpinWheelResult['items'] = [];
 
-      setClovers((prev) => Math.max(0, prev - 5));
+    segmentTypes.forEach((segType, idx) => {
+      const uid = `spin-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`;
 
-      if (!rareChar) {
-        return {
-          segmentLabel: 'Gói Nhân Vật Hiếm',
-          rewardKind: 'rare-character-pack',
-          items: [],
-        };
-      }
-
-      setUnlockedIds((prev) => Array.from(new Set([...prev, rareChar.id])));
-      setOwnedImageIds((prev) => Array.from(new Set([...prev, rareChar.id])));
-
-      return {
-        segmentLabel: 'Gói Nhân Vật Hiếm',
-        rewardKind: 'rare-character-pack',
-        items: [
-          {
-            id: `spin-${Date.now()}-rare`,
+      if (segType === 'rare-character-pack') {
+        const unownedRares = RARE_CHARACTERS.filter(
+          (r) => !unlockedIds.includes(r.id) && !unlockedBatch.includes(r.id)
+        );
+        const rareChar = pickRandomChar(
+          unownedRares.length > 0 ? unownedRares : RARE_CHARACTERS
+        );
+        if (rareChar) {
+          unlockedBatch.push(rareChar.id);
+          imageBatch.push(rareChar.id);
+          resultItems.push({
+            id: uid,
             character: rareChar,
             isRare: true,
-            label: 'Mở khóa Nhân vật hiếm',
-          },
-        ],
-      };
-    }
-
-    if (segmentType === 'character-pack') {
-      const unlockedList: string[] = [];
-      const items: SpinWheelResult['items'] = [];
-
-      const firstChar = pickRandomChar(CHARACTERS);
-      if (firstChar) {
-        unlockedList.push(firstChar.id);
-        items.push({
-          id: `spin-${Date.now()}-1`,
-          character: firstChar,
-          isRare: false,
-          label: 'Mở khóa Nhân vật',
-        });
-
-        const secondPool = CHARACTERS.filter((c) => c.id !== firstChar.id);
-        const secondChar = pickRandomChar(secondPool.length > 0 ? secondPool : CHARACTERS);
-        if (secondChar) {
-          unlockedList.push(secondChar.id);
-          items.push({
-            id: `spin-${Date.now()}-2`,
-            character: secondChar,
-            isRare: false,
-            label: 'Mở khóa Nhân vật',
+            label: 'Gói Nhân Vật Hiếm',
+          });
+        } else {
+          resultItems.push({
+            id: uid,
+            isRare: true,
+            label: 'Gói Nhân Vật Hiếm (chưa có nhân vật hiếm)',
           });
         }
+        return;
       }
 
-      setClovers((prev) => Math.max(0, prev - 5));
-      if (unlockedList.length > 0) {
-        setUnlockedIds((prev) => Array.from(new Set([...prev, ...unlockedList])));
-        setOwnedImageIds((prev) => Array.from(new Set([...prev, ...unlockedList])));
-      }
-
-      return {
-        segmentLabel: 'Gói Nhân Vật',
-        rewardKind: 'character-pack',
-        items,
-      };
-    }
-
-    if (segmentType === 'image-pack') {
-      const imgIds: string[] = [];
-      const items: SpinWheelResult['items'] = [];
-
-      for (let i = 0; i < 3; i++) {
+      if (segType === 'character-pack') {
         const char = pickRandomChar(CHARACTERS);
-        if (!char) continue;
-        imgIds.push(char.id);
-        items.push({
-          id: `spin-${Date.now()}-${i}`,
-          character: char,
-          isRare: false,
-          label: 'Ảnh nhân vật',
-        });
+        if (char) {
+          unlockedBatch.push(char.id);
+          imageBatch.push(char.id);
+          resultItems.push({
+            id: uid,
+            character: char,
+            isRare: false,
+            label: 'Gói Nhân Vật · Mở khóa link',
+          });
+        } else {
+          resultItems.push({
+            id: uid,
+            isRare: false,
+            label: 'Gói Nhân Vật (chưa có nhân vật)',
+          });
+        }
+        return;
       }
 
-      setClovers((prev) => Math.max(0, prev - 5));
-      if (imgIds.length > 0) {
-        setOwnedImageIds((prev) => Array.from(new Set([...prev, ...imgIds])));
+      if (segType === 'image-pack') {
+        const char = pickRandomChar(CHARACTERS);
+        if (char) {
+          imageBatch.push(char.id);
+          resultItems.push({
+            id: uid,
+            character: char,
+            isRare: false,
+            label: 'Gói Ảnh · Ảnh nhân vật',
+          });
+        } else {
+          resultItems.push({
+            id: uid,
+            isRare: false,
+            label: 'Gói Ảnh (chưa có nhân vật)',
+          });
+        }
+        return;
       }
 
-      return {
-        segmentLabel: 'Gói Ảnh',
-        rewardKind: 'image-pack',
-        items,
-      };
+      const gain = segType === 'clover-5' ? 5 : segType === 'clover-2' ? 2 : 1;
+      netCloverDelta += gain;
+      resultItems.push({
+        id: uid,
+        cloverGain: gain,
+        isRare: false,
+        label: 'Cỏ 4 lá may mắn',
+      });
+    });
+
+    setClovers((prev) => Math.max(0, prev + netCloverDelta));
+    if (unlockedBatch.length > 0) {
+      setUnlockedIds((prev) => Array.from(new Set([...prev, ...unlockedBatch])));
     }
-
-    const cloverBonusMap = {
-      'clover-2': 2,
-      'clover-1': 1,
-      'clover-5': 5,
-    } as const;
-    const gain = cloverBonusMap[segmentType];
-    setClovers((prev) => Math.max(0, prev - 5 + gain));
+    if (imageBatch.length > 0) {
+      setOwnedImageIds((prev) => Array.from(new Set([...prev, ...imageBatch])));
+    }
 
     return {
-      segmentLabel: `+${gain} 🍀`,
-      rewardKind: 'clover',
-      cloverGain: gain,
-      items: [],
+      segmentLabel: `3 vật phẩm ${userName || 'bạn'} nhận được`,
+      rewardKind: 'multi',
+      items: resultItems,
     };
   };
 
@@ -423,6 +416,8 @@ export function App() {
     setSelectedId(visibleRosterPool[nextIdx].id);
   };
 
+  const isGateActive = !hasAcceptedNotice || !userName.trim();
+
   return (
     <div id="top" className="relative min-h-screen flex flex-col text-[#0A2A43]">
       <OceanLuckyAtmosphere />
@@ -430,13 +425,13 @@ export function App() {
       <Navbar
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
+        userName={userName}
+        onEditName={() => setIsEditingName(true)}
         clovers={clovers}
-        checkedInToday={checkedInRecently}
-        onCheckIn={handleCheckIn}
       />
 
       {/* Toast nhắc nhở điểm danh sau 24 giờ kể từ lần cuối điểm danh */}
-      {showCheckInToast && (
+      {!isGateActive && showCheckInToast && (
         <div
           role="status"
           aria-live="polite"
@@ -471,52 +466,50 @@ export function App() {
 
       <main className="relative z-10 flex-1">
         {activeTab === 'nhan-vat' && (
-          <div className="max-w-[1200px] mx-auto px-6 py-8 sm:py-10 space-y-8">
+          <div className="max-w-[1200px] mx-auto px-6 py-6 sm:py-8 space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-xs sm:text-sm font-semibold text-[#285270] tabular-nums">
+                Mở link: <strong className="text-[#0A2A43]">1 🍀</strong> · Vòng quay:{' '}
+                <strong className="text-[#0A2A43]">5 🍀</strong>
+              </span>
+              <button
+                type="button"
+                onClick={handleCheckIn}
+                disabled={checkedInRecently}
+                className={`inline-flex items-center gap-2 px-5 py-2 text-xs sm:text-sm font-bold whitespace-nowrap shrink-0 ${
+                  checkedInRecently
+                    ? 'glass-btn opacity-80 cursor-default'
+                    : 'glass-btn-lucky cursor-pointer'
+                }`}
+              >
+                {checkedInRecently ? (
+                  <>
+                    <Check className="w-4 h-4 text-[#15803D]" />
+                    <span>Đã điểm danh (24h)</span>
+                  </>
+                ) : (
+                  <>
+                    <CalendarCheck2 className="w-4 h-4 text-[#15803D]" />
+                    <span>Điểm danh (+2 🍀)</span>
+                  </>
+                )}
+              </button>
+            </div>
+
             <section
-              aria-label="Điểm danh và tìm kiếm nhân vật"
+              aria-label="Tìm kiếm nhân vật"
               className="glass-panel rounded-3xl p-4 sm:p-5 space-y-4"
             >
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleCheckIn}
-                    disabled={checkedInRecently}
-                    className={`inline-flex items-center gap-2 px-5 py-2 text-xs sm:text-sm font-bold whitespace-nowrap shrink-0 ${
-                      checkedInRecently
-                        ? 'glass-btn opacity-80 cursor-default'
-                        : 'glass-btn-lucky cursor-pointer'
-                    }`}
-                  >
-                    {checkedInRecently ? (
-                      <>
-                        <Check className="w-4 h-4 text-[#15803D]" />
-                        <span>Đã điểm danh (24h)</span>
-                      </>
-                    ) : (
-                      <>
-                        <CalendarCheck2 className="w-4 h-4 text-[#15803D]" />
-                        <span>Điểm danh hôm nay (+2 🍀)</span>
-                      </>
-                    )}
-                  </button>
-                  <span className="text-xs sm:text-sm font-semibold text-[#285270] tabular-nums">
-                    Đang có <strong className="text-[#0A2A43]">{clovers} 🍀</strong> ·
-                    Mở link: 1 🍀 · Vòng quay: 5 🍀
-                  </span>
-                </div>
-
-                <div className="relative w-full lg:w-80">
-                  <Search className="w-4 h-4 text-[#4B7796] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="search"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Tìm theo tên hoặc tag..."
-                    aria-label="Tìm kiếm theo tên hoặc tags"
-                    className="w-full pl-10 pr-4 py-2 text-sm rounded-full bg-white/80 border border-white text-[#0A2A43] placeholder:text-[#4B7796] focus:outline-none focus:border-[#0284C7]"
-                  />
-                </div>
+              <div className="relative w-full">
+                <Search className="w-4 h-4 text-[#4B7796] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm theo tên hoặc tag..."
+                  aria-label="Tìm kiếm theo tên hoặc tags"
+                  className="w-full pl-10 pr-4 py-2 text-sm rounded-full bg-white/80 border border-white text-[#0A2A43] placeholder:text-[#4B7796] focus:outline-none focus:border-[#0284C7]"
+                />
               </div>
 
               <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#0E7490]/10">
@@ -693,6 +686,7 @@ export function App() {
         {activeTab === 'thu-vien' && (
           <GallerySection
             characters={CHARACTERS}
+            userName={userName}
             unlockedIds={unlockedIds}
             ownedImageIds={ownedImageIds}
             visitedUnlockLinkIds={visitedUnlockLinkIds}
@@ -709,6 +703,7 @@ export function App() {
         {activeTab === 'fiish' && (
           <FiishSection
             characters={ALL_CHARACTERS}
+            userName={userName}
             unlockedCount={unlockedIds.length}
             ownedImagesCount={ownedImageIds.length}
             totalLikes={totalLikes}
@@ -731,6 +726,7 @@ export function App() {
 
       <CharacterDetailModal
         character={selectedCharacter}
+        userName={userName}
         isUnlocked={
           selectedCharacter ? unlockedIds.includes(selectedCharacter.id) : false
         }
@@ -762,6 +758,27 @@ export function App() {
       />
 
       <MusicPlayerWidget />
+
+      {!hasAcceptedNotice ? (
+        <NoticeGateModal onAccept={() => setHasAcceptedNotice(true)} />
+      ) : !userName.trim() ? (
+        <NameSetupModal
+          onSaveName={(name) => {
+            setUserName(name);
+            setIsEditingName(false);
+          }}
+        />
+      ) : isEditingName ? (
+        <NameSetupModal
+          initialName={userName}
+          canCancel
+          onSaveName={(name) => {
+            setUserName(name);
+            setIsEditingName(false);
+          }}
+          onCancel={() => setIsEditingName(false)}
+        />
+      ) : null}
     </div>
   );
 }

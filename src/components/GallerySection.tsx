@@ -5,6 +5,7 @@ import { PortraitImage } from './PortraitImage';
 
 interface GallerySectionProps {
   characters: CharacterProfile[];
+  userName: string;
   unlockedIds: string[];
   ownedImageIds: string[];
   visitedUnlockLinkIds: string[];
@@ -19,6 +20,7 @@ interface GallerySectionProps {
 
 export function GallerySection({
   characters,
+  userName,
   unlockedIds,
   ownedImageIds,
   visitedUnlockLinkIds,
@@ -52,14 +54,14 @@ export function GallerySection({
     <section className="max-w-[1040px] mx-auto px-6 py-10">
       <div className="mb-8">
         <p className="text-xs font-bold text-[#0284C7] mb-2">
-          Thư Viện Hồ Sơ Nhân Vật
+          Bộ sưu tập của {userName}
         </p>
         <h1 className="font-display text-3xl sm:text-5xl font-bold tracking-tight text-[#0A2A43] text-balance">
           Thư Viện Luckyfish
         </h1>
         <p className="text-sm sm:text-base text-[#285270] mt-3 max-w-2xl leading-relaxed">
-          Mỗi hàng hiển thị 3 khung hồ sơ nhỏ gọn. Bấm vào hình hoặc bất kỳ vị trí
-          nào trên thẻ (trừ tags) để mở hồ sơ chi tiết của nhân vật.
+          Bấm vào hình hoặc bất kỳ vị trí nào trên thẻ (trừ tags) để mở hồ sơ
+          chi tiết của nhân vật.
         </p>
       </div>
 

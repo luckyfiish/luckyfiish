@@ -3,6 +3,7 @@ import { CharacterProfile } from '../types/character';
 
 interface FiishSectionProps {
   characters: CharacterProfile[];
+  userName: string;
   unlockedCount: number;
   ownedImagesCount: number;
   totalLikes: number;
@@ -16,6 +17,7 @@ const CREATOR_AVATAR_URL =
 
 export function FiishSection({
   characters,
+  userName,
   unlockedCount,
   ownedImagesCount,
   totalLikes,
@@ -81,7 +83,7 @@ export function FiishSection({
 
         <div className="lg:col-span-5 glass-panel rounded-3xl p-6 sm:p-8 space-y-6">
           <h2 className="font-display text-2xl font-bold text-[#0A2A43]">
-            Tiến độ sưu tầm hiện tại
+            Bộ sưu tập của {userName}
           </h2>
           <dl className="grid grid-cols-2 gap-5 pt-3 border-t border-[#0E7490]/15">
             <div>

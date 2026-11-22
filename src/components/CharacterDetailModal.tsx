@@ -21,6 +21,7 @@ import { OceanLuckyAtmosphere } from './OceanLuckyAtmosphere';
 
 interface CharacterDetailModalProps {
   character: CharacterProfile | null;
+  userName: string;
   isUnlocked: boolean;
   hasVisitedUnlockLink: boolean;
   isLinkVerified: boolean;
@@ -43,6 +44,7 @@ interface CharacterDetailModalProps {
 
 export function CharacterDetailModal({
   character,
+  userName,
   isUnlocked,
   hasVisitedUnlockLink,
   isLinkVerified,
@@ -63,7 +65,6 @@ export function CharacterDetailModal({
   onNext,
 }: CharacterDetailModalProps) {
   const [copied, setCopied] = useState(false);
-  const [authorInput, setAuthorInput] = useState('');
   const [commentInput, setCommentInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -144,7 +145,7 @@ export function CharacterDetailModal({
     e.preventDefault();
     const content = commentInput.trim();
     if (!content) return;
-    onAddComment(character.id, authorInput.trim() || 'Khách ghé thăm', content);
+    onAddComment(character.id, userName.trim() || 'Khách ghé thăm', content);
     setCommentInput('');
   };
 
@@ -631,34 +632,27 @@ export function CharacterDetailModal({
             <form
               onSubmit={handleSubmitComment}
               onClick={(e) => e.stopPropagation()}
-              className="space-y-3"
+              className="space-y-2.5"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="text-xs font-semibold text-[#285270]">
+                Bình luận với tên: <strong className="text-[#0A2A43]">{userName}</strong>
+              </div>
+              <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  value={authorInput}
-                  onChange={(e) => setAuthorInput(e.target.value)}
-                  placeholder="Tên của bạn (tùy chọn)"
-                  aria-label="Tên người bình luận"
-                  className="px-4 py-2.5 text-sm rounded-full bg-[#F2FAFF] border border-[#BAE6FD] text-[#0A2A43] placeholder:text-[#4B7796] focus:outline-none focus:border-[#0284C7]"
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  placeholder="Viết bình luận cho hồ sơ nhân vật..."
+                  aria-label="Nội dung bình luận"
+                  className="flex-1 px-4 py-2.5 text-sm rounded-full bg-[#F2FAFF] border border-[#BAE6FD] text-[#0A2A43] placeholder:text-[#4B7796] focus:outline-none focus:border-[#0284C7]"
                 />
-                <div className="sm:col-span-2 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={commentInput}
-                    onChange={(e) => setCommentInput(e.target.value)}
-                    placeholder="Viết bình luận cho hồ sơ nhân vật..."
-                    aria-label="Nội dung bình luận"
-                    className="flex-1 px-4 py-2.5 text-sm rounded-full bg-[#F2FAFF] border border-[#BAE6FD] text-[#0A2A43] placeholder:text-[#4B7796] focus:outline-none focus:border-[#0284C7]"
-                  />
-                  <button
-                    type="submit"
-                    className="glass-btn-lucky inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-bold whitespace-nowrap shrink-0 cursor-pointer"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Gửi</span>
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="glass-btn-lucky inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Gửi</span>
+                </button>
               </div>
             </form>
 
