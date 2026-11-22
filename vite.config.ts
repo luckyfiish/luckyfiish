@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 function resolveBasePath(): string {
   if (process.env.GITHUB_ACTIONS === 'true') {
-    return './';
+    return ''/luckyfiish/';
   }
   return process.env.VITE_BASE_PATH || '/';
 }
