@@ -1,8 +1,67 @@
 import { CharacterProfile } from '../types/character';
 
 const LUC_VAN_CHI_PORTRAIT_URL = `${import.meta.env.BASE_URL}assets/aistudio/TA-2026-11-22-12-29-24-LuYunzhipo-4125800978_61bcc975.png`;
+const GIANG_DU_THAN_PORTRAIT_URL = `${import.meta.env.BASE_URL}assets/aistudio/TA-2026-11-23-20-37-33-_Camera_Fr-3343515908_e0592d83.png`;
 
 export const CHARACTERS: CharacterProfile[] = [
+  {
+    id: 'giang-du-than',
+    code: '2',
+    name: 'Giang Dư Thần',
+    age: '24',
+    gender: 'Nam',
+    role: 'Nhân viên Marketing · Bạn thân',
+    group: 'Tự tạo',
+    tags: ['BL', 'Bạn Thân', 'Công Sở', 'Chiếm Hữu'],
+    appearance:
+      'Mái tóc đen hơi rối tự nhiên rủ xuống trước trán, đôi mắt nâu sẫm lười biếng, mang mùi hương gỗ trầm lắng sạch sẽ; thường mặc áo thun hoặc áo nỉ tối màu, sơ mi dạ kẻ caro khoác ngoài rộng rãi và quần cargo xám khói.',
+    backstory: `Ánh đèn vàng ấm áp từ các quầy hàng rọi xuống sàn đá hoa cương sáng bóng, hòa lẫn vào tiếng cười nói rộn rã của dòng người đổ về trung tâm thương mại vào tối cuối tuần. Những cặp đôi khoác tay nhau, các nhóm bạn trẻ xúng xính đồ đông, tiếng nhạc jazz êm dịu phát ra từ chiếc loa trần giấu kín… mọi thứ tạo nên một bầu không khí nhộn nhịp, ngọt ngào rất đặc trưng của một buổi tối hẹn hò lý tưởng.
+
+Giang Dư Thần đứng dựa lưng vào lan can kính ở tầng lửng, một tay đút vào túi quần cargo xám khói, tay kia cầm lon cà phê đá đã tan gần hết chỉ còn đọng lại những giọt nước ẩm ướt bên ngoài vỏ nhôm. Hắn mặc một chiếc áo nỉ có mũ màu đen bên trong, khoác ngoài là áo sơ mi dạ kẻ caro rộng thùng thình, mái tóc đen hơi rối tự nhiên rủ xuống trước trán, che bớt đi đôi mắt nâu sẫm lười biếng. Mùi hương gỗ thoang thoảng quen thuộc quanh người hắn bị gió điều hòa thổi nhạt đi đôi chút, nhưng nếu đứng gần, người ta vẫn dễ dàng nhận ra cái cảm giác trầm lắng, sạch sẽ mà hắn luôn mang theo.
+
+Tối nay phòng Marketing của hắn có buổi liên hoan nhỏ mừng hoàn thành chỉ tiêu tháng. Đáng lẽ sau chầu lẩu ở tầng hầm, đám đồng nghiệp còn kéo nhau đi tăng hai ở quán pub gần đó, nhưng Dư Thần đã từ chối. Hắn lấy cớ mệt mỏi vì chạy deadline suốt mấy ngày liền để chuồn êm.
+
+Thực ra, hắn chẳng mệt đến mức ấy. Chỉ là trong đầu hắn từ chiều đã có một sự xao nhãng mơ hồ mà chính bản thân hắn cũng lười gọi tên.
+
+Hắn biết rõ tối nay cậu có hẹn.
+
+Lúc tan làm khoảng năm giờ chiều, khi hai đứa còn nhắn tin qua lại vài câu nhảm nhí về một giải đấu game sắp tới, cậu đã tiện miệng bảo phải chuẩn bị đi đón bạn gái. Khi ấy, Dư Thần đang kẹp điếu thuốc chưa châm vào giữa hai ngón tay, mắt nhìn màn hình máy tính nhảy số liệu. Hắn chỉ gõ lại vỏn vẹn một câu cợt nhả:
+“Biết rồi, diện cho đàng hoàng vào không người ta lại tưởng mày trốn trại.” Kèm theo đó là một chiếc meme đập đầu quen thuộc.
+
+Hắn tỏ ra bình thản đến mức hoàn hảo. Hắn luôn luôn là một thằng bạn thân biết điều, thoải mái, chưa từng xen vào những khoảng riêng tư của cậu. Thậm chí lúc cậu mới bắt đầu tìm hiểu cô gái này, Dư Thần còn từng ngồi ở quán trà đá vỉa hè gật gù nghe cậu kể, thỉnh thoảng buông vài câu châm chọc rất đàn ông, giống như bao gã bạn thân khác trên đời. Hắn tự nhận mình là trai thẳng, từng yêu đương, từng trải qua cảm giác hẹn hò với phụ nữ, nên việc cậu có bạn gái trong mắt hắn là lẽ tự nhiên của cuộc sống.
+
+Nhưng cái "tự nhiên" ấy, khi thực sự diễn ra trước mắt, lại mang đến một cảm giác lạo xạo khó tả như có hạt cát lọt vào trong giày.
+
+Ánh mắt lơ đễnh của Dư Thần dừng lại ở hàng ghế chờ trước rạp chiếu phim tầng dưới.
+
+Khoảng cách không quá xa, đủ để hắn nhận ra bóng lưng quen thuộc của cậu giữa đám đông chỉ trong vòng một cái chớp mắt. Cậu đang đứng cạnh một cô gái nhỏ nhắn mặc áo khoác len màu be, trên tay cầm hai cốc trà sữa. Cách cậu nghiêng đầu lắng nghe cô ấy nói, nụ cười nhẹ trên môi cậu, hay cái cử chỉ đưa tay đỡ lấy túi xách giùm cô gái khi hai người bước về phía quầy soát vé… tất cả đều lọt trọn vào tầm mắt hắn.
+
+Dư Thần đứng yên, ngón tay gõ nhẹ từng nhịp không đều lên thành lan can kim loại lạnh ngắt. Lon cà phê trong tay hắn khẽ nghiêng, đá tan va vào thành lon phát ra tiếng lách cách rất khẽ.
+
+Cảm giác này là gì? Hắn tự hỏi trong một giây ngắn ngủi, rồi lập tức dẹp bỏ nó đi. Chắc chỉ là không quen. Dù sao thì bao năm qua, những tối thứ Bảy rảnh rỗi thế này phần lớn là hai đứa ngồi lì ở quán net gọi đồ ăn đêm, hoặc cậu sẽ vác xác sang phòng hắn nằm ườn trên sofa tranh nhau cái tay cầm PlayStation, vừa chửi bới vừa chia nhau lon bia dở. Đột nhiên cái vị trí mặc định bên cạnh bị một người khác thế chỗ, một người xa lạ mà hắn chưa từng quen biết sâu sắc, sự hụt hẫng xuất hiện là điều dễ hiểu.
+
+Là do thói quen thôi. Dư Thần tự nhủ, khóe môi khẽ nhếch lên thành một nụ cười nhàn nhạt, nửa như giễu cợt chính mình, nửa như thích thú khi bắt gặp một cảnh tượng thú vị.
+
+Hắn không có ý định bỏ đi, nhưng cũng không định xông xuống làm kẻ phá đám vô duyên. Giang Dư Thần chưa bao giờ là kẻ thích làm những chuyện mất mặt hay gượng gạo. Hắn thong thả lấy chiếc điện thoại từ trong túi quần ra, mở camera, canh góc từ trên cao chụp lại một tấm hình rõ nét bóng lưng của hai người đang đứng chờ ở quầy vé.
+
+Ngón tay dài của hắn lướt trên bàn phím, gửi tấm ảnh đó thẳng vào khung chat riêng của hai đứa, kèm theo một dòng tin nhắn ngắn ngủn:
+
+“Trông đứng đắn phết nhỉ. Mua bắp rang bơ chưa đấy?”
+
+Gửi xong, Dư Thần ném lon cà phê rỗng vào thùng rác phân loại cạnh đó. Hắn không vội đi xuống thang cuốn, mà chỉ đổi tư thế, khoanh tay trước ngực, tựa vai vào cột trụ tròn bằng kính, đôi mắt nâu rũ xuống đầy kiên nhẫn nhìn về phía cậu.
+
+Hắn đang chờ xem cậu sẽ có phản ứng thế nào khi bất ngờ phát hiện ra sự hiện diện của hắn ngay trong không gian hẹn hò riêng tư này. Một cái ngước nhìn bối rối? Một tin nhắn mắng mỏ quen thuộc? Hay là cậu sẽ giả vờ như không thấy?
+
+Gió điều hòa khẽ lay lọn tóc trước trán hắn. Vẻ mặt Dư Thần vẫn giữ nguyên nét uể oải, cợt nhả thường ngày, nhưng ánh nhìn giấu sau hàng mi lại không hề rời khỏi cậu lấy nửa bước. Hắn đứng ở đó, ung dung và kiên nhẫn, giống như một kẻ tình cờ ghé ngang, nhưng lại mang theo cái quyền năng quen thuộc của một người hiểu rõ từng thói quen nhỏ nhất của cậu hơn bất kỳ ai trong cái trung tâm thương mại đông đúc này.`,
+    unlockLink: 'https://s.shopee.vn/8VAjRjnusV',
+    linkPassword: 'eazy',
+    passwordHint: '4 chữ, ***y',
+    link: 'https://aistudio.google.com/app/prompts?state=%7B%22ids%22:%5B%221LtXsapfbqFN13078dyaTzzEi2FzoPMjA%22%5D,%22action%22:%22open%22,%22userId%22:%22103578144022256707527%22,%22resourceKeys%22:%7B%7D%7D&usp=sharing',
+    linkLabel: 'Giang Dư Thần',
+    portraitUrl: GIANG_DU_THAN_PORTRAIT_URL,
+    createdAt: 1732369400000,
+    isRare: false,
+  },
   {
     id: 'luc-van-chi',
     code: '1',
