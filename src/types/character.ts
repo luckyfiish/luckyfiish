@@ -27,8 +27,11 @@ export interface CharacterProfile {
 
 export interface CharacterComment {
   id: string;
+  characterId?: string;
+  authorUid?: string;
   author: string;
   content: string;
+  likesCount: number;
   createdAt: number;
 }
 

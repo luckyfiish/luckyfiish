@@ -1,0 +1,266 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 4 Global Safety Net: default deny everything
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // === Phase 3: Primitive Helpers ===
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    // === Phase 2: Validation Blueprints (derived from firebase-blueprint.json) ===
+    function isValidCharacterStats(data) {
+      return data.keys().hasAll(['characterId', 'likesCount', 'commentsCount', 'lastCommentId', 'isPublic', 'updatedAt'])
+        && data.keys().hasOnly(['characterId', 'likesCount', 'commentsCount', 'lastCommentId', 'isPublic', 'updatedAt'])
+        && data.characterId is string && data.characterId.size() >= 1 && data.characterId.size() <= 64 && isValidId(data.characterId)
+        && data.likesCount is int && data.likesCount >= 0
+        && data.commentsCount is int && data.commentsCount >= 0
+        && data.lastCommentId is string && data.lastCommentId.size() <= 128 && data.lastCommentId.matches('^[a-zA-Z0-9_\\-]*$')
+        && data.isPublic is bool && data.isPublic == true
+        && data.updatedAt == request.time;
+    }
+
+    function isValidComment(data) {
+      return data.keys().hasAll(['characterId', 'authorUid', 'authorName', 'content', 'likesCount', 'lastLikeId', 'isPublic', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['characterId', 'authorUid', 'authorName', 'content', 'likesCount', 'lastLikeId', 'isPublic', 'createdAt', 'updatedAt'])
+        && data.characterId is string && data.characterId.size() >= 1 && data.characterId.size() <= 64 && isValidId(data.characterId)
+        && data.authorUid is string && isValidId(data.authorUid)
+        && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 30
+        && data.content is string && data.content.size() >= 1 && data.content.size() <= 500
+        && data.likesCount is int && data.likesCount >= 0
+        && data.lastLikeId is string && data.lastLikeId.size() <= 128 && data.lastLikeId.matches('^[a-zA-Z0-9_\\-]*$')
+        && data.isPublic is bool && data.isPublic == true
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidLike(data) {
+      return data.keys().hasAll(['characterId', 'uid', 'createdAt'])
+        && data.keys().hasOnly(['characterId', 'uid', 'createdAt'])
+        && data.characterId is string && data.characterId.size() >= 1 && data.characterId.size() <= 64 && isValidId(data.characterId)
+        && data.uid is string && isValidId(data.uid) && data.uid == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    function isValidCommentLike(data) {
+      return data.keys().hasAll(['characterId', 'commentId', 'uid', 'createdAt'])
+        && data.keys().hasOnly(['characterId', 'commentId', 'uid', 'createdAt'])
+        && data.characterId is string && data.characterId.size() >= 1 && data.characterId.size() <= 64 && isValidId(data.characterId)
+        && data.commentId is string && isValidId(data.commentId)
+        && data.uid is string && isValidId(data.uid) && data.uid == request.auth.uid
+        && data.createdAt == request.time;
+    }
+
+    // === Collection: characterStats (Public non-PII character counters) ===
+    match /characterStats/{characterId} {
+      allow get: if isValidId(characterId) && existing().isPublic == true;
+      allow list: if existing().isPublic == true;
+
+      allow create: if isVerifiedUser()
+        && isValidId(characterId)
+        && isValidCharacterStats(incoming())
+        && incoming().characterId == characterId
+        && (
+          // Action: First Heart on Character
+          (
+            incoming().likesCount == 1
+            && incoming().commentsCount == 0
+            && incoming().lastCommentId == ''
+            && !exists(/databases/$(database)/documents/likes/$(characterId + '__' + request.auth.uid))
+            && existsAfter(/databases/$(database)/documents/likes/$(characterId + '__' + request.auth.uid))
+          )
+          ||
+          // Action: First Comment on Character
+          (
+            incoming().likesCount == 0
+            && incoming().commentsCount == 1
+            && isValidId(incoming().lastCommentId)
+            && !exists(/databases/$(database)/documents/characterStats/$(characterId)/comments/$(incoming().lastCommentId))
+            && existsAfter(/databases/$(database)/documents/characterStats/$(characterId)/comments/$(incoming().lastCommentId))
+            && getAfter(/databases/$(database)/documents/characterStats/$(characterId)/comments/$(incoming().lastCommentId)).data.authorUid == request.auth.uid
+          )
+        );
+
+      allow update: if isVerifiedUser()
+        && isValidId(characterId)
+        && isValidCharacterStats(incoming())
+        && incoming().characterId == existing().characterId
+        && incoming().isPublic == existing().isPublic
+        && (
+          // Action: Heart Character (+1)
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'updatedAt'])
+            && incoming().likesCount == existing().likesCount + 1
+            && !exists(/databases/$(database)/documents/likes/$(characterId + '__' + request.auth.uid))
+            && existsAfter(/databases/$(database)/documents/likes/$(characterId + '__' + request.auth.uid))
+          )
+          ||
+          // Action: Unheart Character (-1)
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'updatedAt'])
+            && incoming().likesCount == existing().likesCount - 1
+            && incoming().likesCount >= 0
+            && exists(/databases/$(database)/documents/likes/$(characterId + '__' + request.auth.uid))
+            && !existsAfter(/databases/$(database)/documents/likes/$(characterId + '__' + request.auth.uid))
+          )
+          ||
+          // Action: Add Comment (+1)
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['commentsCount', 'lastCommentId', 'updatedAt'])
+            && incoming().commentsCount == existing().commentsCount + 1
+            && isValidId(incoming().lastCommentId)
+            && !exists(/databases/$(database)/documents/characterStats/$(characterId)/comments/$(incoming().lastCommentId))
+            && existsAfter(/databases/$(database)/documents/characterStats/$(characterId)/comments/$(incoming().lastCommentId))
+            && getAfter(/databases/$(database)/documents/characterStats/$(characterId)/comments/$(incoming().lastCommentId)).data.authorUid == request.auth.uid
+          )
+          ||
+          // Action: Delete Own Comment (-1)
+          (
+            incoming().diff(existing()).affectedKeys().hasOnly(['commentsCount', 'lastCommentId', 'updatedAt'])
+            && incoming().commentsCount == existing().commentsCount - 1
+            && incoming().commentsCount >= 0
+            && isValidId(incoming().lastCommentId)
+            && exists(/databases/$(database)/documents/characterStats/$(characterId)/comments/$(incoming().lastCommentId))
+            && !existsAfter(/databases/$(database)/documents/characterStats/$(characterId)/comments/$(incoming().lastCommentId))
+            && get(/databases/$(database)/documents/characterStats/$(characterId)/comments/$(incoming().lastCommentId)).data.authorUid == request.auth.uid
+          )
+        );
+
+      allow delete: if false;
+
+      // === Subcollection: comments (Public non-PII comments per character) ===
+      match /comments/{commentId} {
+        allow get: if isValidId(characterId) && isValidId(commentId) && existing().isPublic == true;
+        allow list: if isValidId(characterId) && existing().isPublic == true;
+
+        allow create: if isVerifiedUser()
+          && isValidId(characterId)
+          && isValidId(commentId)
+          && isValidComment(incoming())
+          && incoming().characterId == characterId
+          && incoming().authorUid == request.auth.uid
+          && incoming().likesCount == 0
+          && incoming().lastLikeId == ''
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && existsAfter(/databases/$(database)/documents/characterStats/$(characterId))
+          && getAfter(/databases/$(database)/documents/characterStats/$(characterId)).data.lastCommentId == commentId
+          && (
+            (!exists(/databases/$(database)/documents/characterStats/$(characterId))
+              && getAfter(/databases/$(database)/documents/characterStats/$(characterId)).data.commentsCount == 1)
+            ||
+            (exists(/databases/$(database)/documents/characterStats/$(characterId))
+              && getAfter(/databases/$(database)/documents/characterStats/$(characterId)).data.commentsCount == get(/databases/$(database)/documents/characterStats/$(characterId)).data.commentsCount + 1)
+          );
+
+        allow update: if isVerifiedUser()
+          && isValidId(characterId)
+          && isValidId(commentId)
+          && isValidComment(incoming())
+          && incoming().characterId == existing().characterId
+          && incoming().authorUid == existing().authorUid
+          && incoming().authorName == existing().authorName
+          && incoming().content == existing().content
+          && incoming().isPublic == existing().isPublic
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'lastLikeId', 'updatedAt'])
+          && incoming().lastLikeId == (commentId + '__' + request.auth.uid)
+          && (
+            // Action: Heart Comment (+1)
+            (
+              incoming().likesCount == existing().likesCount + 1
+              && !exists(/databases/$(database)/documents/commentLikes/$(commentId + '__' + request.auth.uid))
+              && existsAfter(/databases/$(database)/documents/commentLikes/$(commentId + '__' + request.auth.uid))
+            )
+            ||
+            // Action: Unheart Comment (-1)
+            (
+              incoming().likesCount == existing().likesCount - 1
+              && incoming().likesCount >= 0
+              && exists(/databases/$(database)/documents/commentLikes/$(commentId + '__' + request.auth.uid))
+              && !existsAfter(/databases/$(database)/documents/commentLikes/$(commentId + '__' + request.auth.uid))
+            )
+          );
+
+        allow delete: if isVerifiedUser()
+          && isValidId(characterId)
+          && isValidId(commentId)
+          && existing().authorUid == request.auth.uid
+          && exists(/databases/$(database)/documents/characterStats/$(characterId))
+          && getAfter(/databases/$(database)/documents/characterStats/$(characterId)).data.lastCommentId == commentId
+          && getAfter(/databases/$(database)/documents/characterStats/$(characterId)).data.commentsCount == get(/databases/$(database)/documents/characterStats/$(characterId)).data.commentsCount - 1;
+      }
+    }
+
+    // === Collection: likes (Private per-user character heart records) ===
+    match /likes/{likeId} {
+      allow get: if isSignedIn() && isValidId(likeId) && existing().uid == request.auth.uid;
+      allow list: if isSignedIn() && existing().uid == request.auth.uid;
+
+      allow create: if isVerifiedUser()
+        && isValidId(likeId)
+        && isValidLike(incoming())
+        && likeId == (incoming().characterId + '__' + request.auth.uid)
+        && existsAfter(/databases/$(database)/documents/characterStats/$(incoming().characterId))
+        && (
+          (!exists(/databases/$(database)/documents/characterStats/$(incoming().characterId))
+            && getAfter(/databases/$(database)/documents/characterStats/$(incoming().characterId)).data.likesCount == 1)
+          ||
+          (exists(/databases/$(database)/documents/characterStats/$(incoming().characterId))
+            && getAfter(/databases/$(database)/documents/characterStats/$(incoming().characterId)).data.likesCount == get(/databases/$(database)/documents/characterStats/$(incoming().characterId)).data.likesCount + 1)
+        );
+
+      allow update: if false;
+
+      allow delete: if isVerifiedUser()
+        && isValidId(likeId)
+        && existing().uid == request.auth.uid
+        && exists(/databases/$(database)/documents/characterStats/$(existing().characterId))
+        && getAfter(/databases/$(database)/documents/characterStats/$(existing().characterId)).data.likesCount == get(/databases/$(database)/documents/characterStats/$(existing().characterId)).data.likesCount - 1;
+    }
+
+    // === Collection: commentLikes (Private per-user comment heart records) ===
+    match /commentLikes/{commentLikeId} {
+      allow get: if isSignedIn() && isValidId(commentLikeId) && existing().uid == request.auth.uid;
+      allow list: if isSignedIn() && existing().uid == request.auth.uid;
+
+      allow create: if isVerifiedUser()
+        && isValidId(commentLikeId)
+        && isValidCommentLike(incoming())
+        && commentLikeId == (incoming().commentId + '__' + request.auth.uid)
+        && exists(/databases/$(database)/documents/characterStats/$(incoming().characterId)/comments/$(incoming().commentId))
+        && getAfter(/databases/$(database)/documents/characterStats/$(incoming().characterId)/comments/$(incoming().commentId)).data.likesCount == get(/databases/$(database)/documents/characterStats/$(incoming().characterId)/comments/$(incoming().commentId)).data.likesCount + 1;
+
+      allow update: if false;
+
+      allow delete: if isVerifiedUser()
+        && isValidId(commentLikeId)
+        && existing().uid == request.auth.uid
+        && (
+          !exists(/databases/$(database)/documents/characterStats/$(existing().characterId)/comments/$(existing().commentId))
+          ||
+          getAfter(/databases/$(database)/documents/characterStats/$(existing().characterId)/comments/$(existing().commentId)).data.likesCount == get(/databases/$(database)/documents/characterStats/$(existing().characterId)/comments/$(existing().commentId)).data.likesCount - 1
+        );
+    }
+  }
+}

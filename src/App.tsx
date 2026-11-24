@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarCheck2, Check, Search, Square, SquareCheck, X } from 'lucide-react';
 import { ALL_CHARACTERS, CHARACTERS, RARE_CHARACTERS } from './data/characters';
-import {
-  CharacterComment,
-  CharacterProfile,
-  MainTab,
-  SpinWheelResult,
-} from './types/character';
+import { CharacterProfile, MainTab, SpinWheelResult } from './types/character';
 import { Navbar } from './components/Navbar';
 import { CharacterCard } from './components/CharacterCard';
 import { CharacterDetailModal } from './components/CharacterDetailModal';
@@ -17,10 +12,9 @@ import { OceanLuckyAtmosphere } from './components/OceanLuckyAtmosphere';
 import { MusicPlayerWidget } from './components/MusicPlayerWidget';
 import { NoticeGateModal } from './components/NoticeGateModal';
 import { NameSetupModal } from './components/NameSetupModal';
+import { useCommunityInteractions } from './hooks/useCommunityInteractions';
 
 const USER_NAME_STORAGE_KEY = 'luckyfiish_user_name_v1';
-const LIKES_STORAGE_KEY = 'luckyfiish_likes_v2';
-const COMMENTS_STORAGE_KEY = 'luckyfiish_comments_v2';
 const CLOVER_STORAGE_KEY = 'luckyfiish_clovers_v2';
 const CHECKIN_TS_STORAGE_KEY = 'luckyfiish_last_checkin_ts_v1';
 const UNLOCKED_STORAGE_KEY = 'luckyfiish_unlocked_v2';
@@ -29,18 +23,6 @@ const VISITED_UNLOCK_LINK_KEY = 'luckyfiish_visited_unlock_links_v2';
 const LINK_VERIFIED_KEY = 'luckyfiish_link_verified_v2';
 
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
-
-interface LikesState {
-  counts: Record<string, number>;
-  likedByMe: Record<string, boolean>;
-}
-
-const DEFAULT_LIKES: LikesState = {
-  counts: {},
-  likedByMe: {},
-};
-
-const DEFAULT_COMMENTS: Record<string, CharacterComment[]> = {};
 
 function loadJson<T>(key: string, fallback: T): T {
   try {
@@ -84,17 +66,27 @@ export function App() {
   const [linkVerifiedIds, setLinkVerifiedIds] = useState<string[]>(() =>
     loadJson<string[]>(LINK_VERIFIED_KEY, [])
   );
-  const [likes, setLikes] = useState<LikesState>(() =>
-    loadJson<LikesState>(LIKES_STORAGE_KEY, DEFAULT_LIKES)
-  );
-  const [commentsByChar, setCommentsByChar] = useState<
-    Record<string, CharacterComment[]>
-  >(() =>
-    loadJson<Record<string, CharacterComment[]>>(
-      COMMENTS_STORAGE_KEY,
-      DEFAULT_COMMENTS
-    )
-  );
+  const {
+    authUser,
+    statsByChar,
+    likedCharIds,
+    likedCommentIds,
+    commentsByChar,
+    isSigningIn,
+    isMutating,
+    feedbackMessage,
+    clearFeedback,
+    signInWithGoogle,
+    signOutGoogle,
+    toggleCharacterLike,
+    addComment,
+    deleteComment,
+    toggleCommentLike,
+  } = useCommunityInteractions(selectedId);
+
+  useEffect(() => {
+    clearFeedback();
+  }, [selectedId, clearFeedback]);
 
   useEffect(() => {
     try {
@@ -111,11 +103,6 @@ export function App() {
         JSON.stringify(visitedUnlockLinkIds)
       );
       window.localStorage.setItem(LINK_VERIFIED_KEY, JSON.stringify(linkVerifiedIds));
-      window.localStorage.setItem(LIKES_STORAGE_KEY, JSON.stringify(likes));
-      window.localStorage.setItem(
-        COMMENTS_STORAGE_KEY,
-        JSON.stringify(commentsByChar)
-      );
     } catch {
       // Ignore storage quota errors
     }
@@ -127,8 +114,6 @@ export function App() {
     ownedImageIds,
     visitedUnlockLinkIds,
     linkVerifiedIds,
-    likes,
-    commentsByChar,
   ]);
 
   const now = Date.now();
@@ -195,13 +180,18 @@ export function App() {
   }, [visibleRosterPool, selectedCharacter]);
 
   const totalLikes = useMemo(
-    () => Object.values(likes.counts).reduce((sum, n) => sum + n, 0),
-    [likes]
+    () =>
+      Object.values(statsByChar).reduce((sum, s) => sum + (s.likesCount ?? 0), 0),
+    [statsByChar]
   );
 
   const totalComments = useMemo(
-    () => Object.values(commentsByChar).reduce((sum, arr) => sum + arr.length, 0),
-    [commentsByChar]
+    () =>
+      Object.values(statsByChar).reduce(
+        (sum, s) => sum + (s.commentsCount ?? 0),
+        0
+      ),
+    [statsByChar]
   );
 
   const handleSelectTab = (tab: MainTab) => {
@@ -366,33 +356,11 @@ export function App() {
   };
 
   const handleToggleLike = (id: string) => {
-    setLikes((prev) => {
-      const currentlyLiked = Boolean(prev.likedByMe[id]);
-      const currentCount = prev.counts[id] ?? 0;
-      return {
-        counts: {
-          ...prev.counts,
-          [id]: Math.max(0, currentCount + (currentlyLiked ? -1 : 1)),
-        },
-        likedByMe: {
-          ...prev.likedByMe,
-          [id]: !currentlyLiked,
-        },
-      };
-    });
+    void toggleCharacterLike(id);
   };
 
   const handleAddComment = (id: string, author: string, content: string) => {
-    const newComment: CharacterComment = {
-      id: `cmt-${Date.now()}`,
-      author,
-      content,
-      createdAt: Date.now(),
-    };
-    setCommentsByChar((prev) => ({
-      ...prev,
-      [id]: [newComment, ...(prev[id] || [])],
-    }));
+    return addComment(id, author, content);
   };
 
   const handlePrevCharacter = () => {
@@ -564,8 +532,8 @@ export function App() {
                         key={character.id}
                         character={character}
                         isUnlocked={unlockedIds.includes(character.id)}
-                        likesCount={likes.counts[character.id] ?? 0}
-                        isLiked={Boolean(likes.likedByMe[character.id])}
+                        likesCount={statsByChar[character.id]?.likesCount ?? 0}
+                        isLiked={Boolean(likedCharIds[character.id])}
                         onSelect={(c) => setSelectedId(c.id)}
                         onSelectTag={handleSelectTag}
                         onUnlock={handleUnlockCharacter}
@@ -610,8 +578,8 @@ export function App() {
                       variant="featured"
                       character={newestCharacter}
                       isUnlocked={unlockedIds.includes(newestCharacter.id)}
-                      likesCount={likes.counts[newestCharacter.id] ?? 0}
-                      isLiked={Boolean(likes.likedByMe[newestCharacter.id])}
+                      likesCount={statsByChar[newestCharacter.id]?.likesCount ?? 0}
+                      isLiked={Boolean(likedCharIds[newestCharacter.id])}
                       onSelect={(c) => setSelectedId(c.id)}
                       onSelectTag={handleSelectTag}
                       onUnlock={handleUnlockCharacter}
@@ -650,8 +618,8 @@ export function App() {
                         key={character.id}
                         character={character}
                         isUnlocked={unlockedIds.includes(character.id)}
-                        likesCount={likes.counts[character.id] ?? 0}
-                        isLiked={Boolean(likes.likedByMe[character.id])}
+                        likesCount={statsByChar[character.id]?.likesCount ?? 0}
+                        isLiked={Boolean(likedCharIds[character.id])}
                         onSelect={(c) => setSelectedId(c.id)}
                         onSelectTag={handleSelectTag}
                         onUnlock={handleUnlockCharacter}
@@ -734,17 +702,30 @@ export function App() {
         clovers={clovers}
         totalCount={visibleRosterPool.length}
         currentIndex={selectedIndex}
-        likesCount={selectedCharacter ? (likes.counts[selectedCharacter.id] ?? 0) : 0}
+        likesCount={
+          selectedCharacter ? (statsByChar[selectedCharacter.id]?.likesCount ?? 0) : 0
+        }
         isLiked={
-          selectedCharacter ? Boolean(likes.likedByMe[selectedCharacter.id]) : false
+          selectedCharacter ? Boolean(likedCharIds[selectedCharacter.id]) : false
         }
         comments={selectedCharacter ? (commentsByChar[selectedCharacter.id] ?? []) : []}
+        likedCommentIds={likedCommentIds}
+        currentAuthUid={authUser?.uid ?? null}
+        isSigningIn={isSigningIn}
+        isMutating={isMutating}
+        interactionFeedback={feedbackMessage}
         onUnlock={handleUnlockCharacter}
         onVisitUnlockLink={handleVisitUnlockLink}
         onVerifyPassword={handleVerifyPassword}
         onSelectTag={handleSelectTag}
+        onSignInGoogle={() => void signInWithGoogle()}
+        onSignOutGoogle={() => void signOutGoogle()}
         onToggleLike={handleToggleLike}
         onAddComment={handleAddComment}
+        onDeleteComment={(charId, commentId) => void deleteComment(charId, commentId)}
+        onToggleCommentLike={(charId, commentId) =>
+          void toggleCommentLike(charId, commentId)
+        }
         onClose={() => setSelectedId(null)}
         onPrev={handlePrevCharacter}
         onNext={handleNextCharacter}

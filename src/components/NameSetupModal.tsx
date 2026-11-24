@@ -19,7 +19,7 @@ export function NameSetupModal({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const trimmed = nameInput.trim();
+    const trimmed = nameInput.trim().slice(0, 30);
     if (!trimmed) {
       setError('Vui lòng nhập tên của bạn để tiếp tục.');
       return;
@@ -59,7 +59,7 @@ export function NameSetupModal({
             <input
               type="text"
               autoFocus
-              maxLength={32}
+              maxLength={30}
               value={nameInput}
               onChange={(e) => {
                 setNameInput(e.target.value);

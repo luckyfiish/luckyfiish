@@ -1,0 +1,204 @@
+{
+  "entities": {
+    "CharacterStats": {
+      "title": "CharacterStats",
+      "description": "Public interaction counters for a character profile (hearts and comments).",
+      "type": "object",
+      "properties": {
+        "characterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Unique slug identifier of the character."
+        },
+        "likesCount": {
+          "type": "integer",
+          "description": "Total number of hearts received by this character."
+        },
+        "commentsCount": {
+          "type": "integer",
+          "description": "Total number of active public comments on this character."
+        },
+        "lastCommentId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]*$",
+          "description": "Comment document ID modified in the latest atomic batch."
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Public visibility flag required for list queries."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the latest counter update."
+        }
+      },
+      "required": [
+        "characterId",
+        "likesCount",
+        "commentsCount",
+        "lastCommentId",
+        "isPublic",
+        "updatedAt"
+      ]
+    },
+    "CharacterComment": {
+      "title": "CharacterComment",
+      "description": "Public comment posted by an authenticated visitor using their chosen display nickname.",
+      "type": "object",
+      "properties": {
+        "characterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Parent character identifier."
+        },
+        "authorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the comment author."
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30,
+          "description": "Chosen display nickname shown publicly next to the comment."
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Comment text content."
+        },
+        "likesCount": {
+          "type": "integer",
+          "description": "Total hearts received by this comment."
+        },
+        "lastLikeId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]*$",
+          "description": "CommentLike document ID toggled in the latest atomic batch."
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Public visibility flag required for list queries."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the comment was created."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the comment was last updated."
+        }
+      },
+      "required": [
+        "characterId",
+        "authorUid",
+        "authorName",
+        "content",
+        "likesCount",
+        "lastLikeId",
+        "isPublic",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CharacterLike": {
+      "title": "CharacterLike",
+      "description": "Per-user heart record for a character (deterministic ID: {characterId}__{uid}).",
+      "type": "object",
+      "properties": {
+        "characterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Liked character identifier."
+        },
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the user who liked the character."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the heart was added."
+        }
+      },
+      "required": ["characterId", "uid", "createdAt"]
+    },
+    "CommentLike": {
+      "title": "CommentLike",
+      "description": "Per-user heart record for a specific comment (deterministic ID: {commentId}__{uid}).",
+      "type": "object",
+      "properties": {
+        "characterId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Parent character identifier."
+        },
+        "commentId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Liked comment identifier."
+        },
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the user who liked the comment."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the comment heart was added."
+        }
+      },
+      "required": ["characterId", "commentId", "uid", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/characterStats/{characterId}": {
+      "schema": {
+        "$ref": "#/entities/CharacterStats"
+      },
+      "description": "Public interaction counters per character."
+    },
+    "/characterStats/{characterId}/comments/{commentId}": {
+      "schema": {
+        "$ref": "#/entities/CharacterComment"
+      },
+      "description": "Public comments subcollection for each character."
+    },
+    "/likes/{likeId}": {
+      "schema": {
+        "$ref": "#/entities/CharacterLike"
+      },
+      "description": "Private per-user character heart records keyed by {characterId}__{uid}."
+    },
+    "/commentLikes/{commentLikeId}": {
+      "schema": {
+        "$ref": "#/entities/CommentLike"
+      },
+      "description": "Private per-user comment heart records keyed by {commentId}__{uid}."
+    }
+  }
+}

@@ -11,8 +11,11 @@ import {
   Images,
   KeyRound,
   Lock,
+  LogIn,
+  LogOut,
   MessageCircle,
   Send,
+  Trash2,
   X,
 } from 'lucide-react';
 import { CharacterComment, CharacterProfile } from '../types/character';
@@ -31,12 +34,25 @@ interface CharacterDetailModalProps {
   likesCount: number;
   isLiked: boolean;
   comments: CharacterComment[];
+  likedCommentIds: Record<string, boolean>;
+  currentAuthUid: string | null;
+  isSigningIn: boolean;
+  isMutating: boolean;
+  interactionFeedback: string;
   onUnlock: (id: string) => void;
   onVisitUnlockLink: (id: string) => void;
   onVerifyPassword: (id: string, password: string) => { ok: boolean; message?: string };
   onSelectTag: (tag: string) => void;
+  onSignInGoogle: () => void;
+  onSignOutGoogle: () => void;
   onToggleLike: (id: string) => void;
-  onAddComment: (id: string, author: string, content: string) => void;
+  onAddComment: (
+    id: string,
+    author: string,
+    content: string
+  ) => Promise<boolean> | boolean;
+  onDeleteComment: (characterId: string, commentId: string) => void;
+  onToggleCommentLike: (characterId: string, commentId: string) => void;
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -54,12 +70,21 @@ export function CharacterDetailModal({
   likesCount,
   isLiked,
   comments,
+  likedCommentIds,
+  currentAuthUid,
+  isSigningIn,
+  isMutating,
+  interactionFeedback,
   onUnlock,
   onVisitUnlockLink,
   onVerifyPassword,
   onSelectTag,
+  onSignInGoogle,
+  onSignOutGoogle,
   onToggleLike,
   onAddComment,
+  onDeleteComment,
+  onToggleCommentLike,
   onClose,
   onPrev,
   onNext,
@@ -141,12 +166,18 @@ export function CharacterDetailModal({
     }
   };
 
-  const handleSubmitComment = (e: FormEvent) => {
+  const handleSubmitComment = async (e: FormEvent) => {
     e.preventDefault();
     const content = commentInput.trim();
-    if (!content) return;
-    onAddComment(character.id, userName.trim() || 'Khách ghé thăm', content);
-    setCommentInput('');
+    if (!content || isMutating || isSigningIn) return;
+    const ok = await onAddComment(
+      character.id,
+      userName.trim() || 'Khách ghé thăm',
+      content
+    );
+    if (ok) {
+      setCommentInput('');
+    }
   };
 
   const handlePasswordSubmit = (e: FormEvent) => {
@@ -606,12 +637,13 @@ export function CharacterDetailModal({
 
               <button
                 type="button"
+                disabled={isMutating || isSigningIn}
                 onClick={(e) => {
                   e.stopPropagation();
                   triggerBurst(e.clientX, e.clientY);
                   onToggleLike(character.id);
                 }}
-                className={`inline-flex items-center gap-2 px-5 py-2 text-sm font-bold whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`inline-flex items-center gap-2 px-5 py-2 text-sm font-bold whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60 ${
                   isLiked ? 'glass-btn-lucky' : 'glass-btn'
                 }`}
               >
@@ -634,12 +666,50 @@ export function CharacterDetailModal({
               onClick={(e) => e.stopPropagation()}
               className="space-y-2.5"
             >
-              <div className="text-xs font-semibold text-[#285270]">
-                Bình luận với tên: <strong className="text-[#0A2A43]">{userName}</strong>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-[#285270]">
+                <span>
+                  Bình luận với tên:{' '}
+                  <strong className="text-[#0A2A43]">{userName}</strong>
+                </span>
+                {currentAuthUid ? (
+                  <button
+                    type="button"
+                    onClick={onSignOutGoogle}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#4B7796] hover:text-[#0A2A43] hover:underline cursor-pointer"
+                  >
+                    <LogOut className="w-3 h-3" />
+                    <span>Đăng xuất Google</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isSigningIn}
+                    onClick={onSignInGoogle}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0284C7] hover:text-[#0A2A43] hover:underline cursor-pointer disabled:opacity-60"
+                  >
+                    <LogIn className="w-3 h-3" />
+                    <span>
+                      {isSigningIn
+                        ? 'Đang mở đăng nhập...'
+                        : 'Đăng nhập Google để tương tác'}
+                    </span>
+                  </button>
+                )}
               </div>
+
+              {!currentAuthUid && (
+                <p className="text-[11px] text-[#4B7796]">
+                  Mọi người đều thấy bình luận của nhau theo thời gian thực. Bấm{' '}
+                  <strong>Gửi</strong> hoặc <strong>Thả tim</strong> sẽ xác thực
+                  nhanh qua Google 1 lần (vẫn giữ tên{' '}
+                  <strong>{userName}</strong> của bạn).
+                </p>
+              )}
+
               <div className="flex items-center gap-2">
                 <input
                   type="text"
+                  maxLength={500}
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}
                   placeholder="Viết bình luận cho hồ sơ nhân vật..."
@@ -648,34 +718,102 @@ export function CharacterDetailModal({
                 />
                 <button
                   type="submit"
-                  className="glass-btn-lucky inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                  disabled={isMutating || isSigningIn || !commentInput.trim()}
+                  className="glass-btn-lucky inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-bold whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Gửi</span>
+                  <span>{isMutating || isSigningIn ? 'Đang gửi...' : 'Gửi'}</span>
                 </button>
               </div>
+
+              {interactionFeedback && (
+                <p className="text-xs font-semibold text-[#B91C1C] px-1">
+                  {interactionFeedback}
+                </p>
+              )}
             </form>
 
             {comments.length > 0 ? (
               <ul className="space-y-2.5">
-                {comments.map((comment) => (
-                  <li
-                    key={comment.id}
-                    className="px-4 py-3 rounded-2xl bg-[#F2FAFF]/95 border border-[#BAE6FD]/80"
-                  >
-                    <div className="flex items-center justify-between gap-3 text-xs text-[#4B7796]">
-                      <span className="font-bold text-[#0A2A43]">
-                        {comment.author}
-                      </span>
-                      <span className="tabular-nums">
-                        {new Date(comment.createdAt).toLocaleDateString('vi-VN')}
-                      </span>
-                    </div>
-                    <p className="text-sm text-[#1E4460] mt-1 leading-relaxed">
-                      {comment.content}
-                    </p>
-                  </li>
-                ))}
+                {comments.map((comment) => {
+                  const isMine =
+                    Boolean(currentAuthUid) &&
+                    comment.authorUid === currentAuthUid;
+                  const isCommentLiked = Boolean(likedCommentIds[comment.id]);
+                  return (
+                    <li
+                      key={comment.id}
+                      onClick={(e) => e.stopPropagation()}
+                      className="px-4 py-3 rounded-2xl bg-[#F2FAFF]/95 border border-[#BAE6FD]/80"
+                    >
+                      <div className="flex items-center justify-between gap-3 text-xs text-[#4B7796]">
+                        <span className="font-bold text-[#0A2A43]">
+                          {comment.author}
+                          {isMine && (
+                            <span className="ml-1.5 font-semibold text-[#0284C7]">
+                              (bạn)
+                            </span>
+                          )}
+                        </span>
+                        <span className="tabular-nums">
+                          {new Date(comment.createdAt).toLocaleString('vi-VN', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-[#1E4460] mt-1 leading-relaxed break-words">
+                        {comment.content}
+                      </p>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          disabled={isMutating || isSigningIn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerBurst(e.clientX, e.clientY);
+                            onToggleCommentLike(character.id, comment.id);
+                          }}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-colors cursor-pointer disabled:opacity-60 ${
+                            isCommentLiked
+                              ? 'bg-[#FFE4E6] text-[#E11D48] border border-[#FECDD3]'
+                              : 'bg-white/80 text-[#285270] border border-[#BAE6FD] hover:text-[#E11D48]'
+                          }`}
+                        >
+                          <Heart
+                            className={`w-3.5 h-3.5 ${
+                              isCommentLiked
+                                ? 'fill-[#E11D48] text-[#E11D48]'
+                                : ''
+                            }`}
+                          />
+                          <span className="tabular-nums">
+                            {comment.likesCount ?? 0}
+                          </span>
+                        </button>
+
+                        {isMine && (
+                          <button
+                            type="button"
+                            disabled={isMutating}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteComment(character.id, comment.id);
+                            }}
+                            aria-label="Xóa bình luận của bạn"
+                            title="Xóa bình luận"
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#4B7796] hover:text-[#B91C1C] cursor-pointer disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Xóa</span>
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="text-xs text-[#4B7796]">
